@@ -6,6 +6,7 @@ using System.Globalization;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Threading.Tasks;
 using BorderlessGaming.Logic.Models;
 using BorderlessGaming.Logic.System.Utilities;
 using BorderlessGaming.Logic.Windows.Audio;
@@ -216,10 +217,17 @@ namespace BorderlessGaming.Logic.Windows
         public static string GetWindowTitle(IntPtr hWnd)
         {
             // Allocate correct string length first
-            var length = (int) SendMessage(hWnd, WM_GETTEXTLENGTH, IntPtr.Zero, IntPtr.Zero);
-            var sbWindowTitle = new StringBuilder(length + 1);
-            SendMessage(hWnd, WM_GETTEXT, (IntPtr) sbWindowTitle.Capacity, sbWindowTitle);
-            return sbWindowTitle.ToString();
+            try
+            {
+                var length = (int)SendMessage(hWnd, WM_GETTEXTLENGTH, IntPtr.Zero, IntPtr.Zero);
+                var sbWindowTitle = new StringBuilder(length + 1);
+                SendMessage(hWnd, WM_GETTEXT, (IntPtr)sbWindowTitle.Capacity, sbWindowTitle);
+                return sbWindowTitle.ToString();
+            }
+            catch (Exception)
+            {
+                return "<error>";
+            }
         }
 
         [DllImport("user32.dll", SetLastError = true)]
@@ -350,7 +358,7 @@ namespace BorderlessGaming.Logic.Windows
         /// </summary>
         /// <param name="process"></param>
         /// <returns></returns>
-        public static IntPtr GetMainWindowForProcess(Process process)
+        public static async Task<IntPtr> GetMainWindowForProcess(Process process)
         {
             if (Config.Instance.AppSettings.SlowWindowDetection)
             {
@@ -358,27 +366,23 @@ namespace BorderlessGaming.Logic.Windows
                 {
                     var hMainWindow = IntPtr.Zero;
 
-                    lock (GetMainWindowForProcess_Locker)
+                    GetMainWindowForProcess_Value = IntPtr.Zero;
+                    await TaskUtilities.StartTaskAndWait(() =>
                     {
-                        GetMainWindowForProcess_Value = IntPtr.Zero;
-                        TaskUtilities.StartTaskAndWait(() =>
+                        for (uint i = 0; i <= 1; i++)
                         {
-                            for (uint i = 0; i <= 1; i++)
+                            foreach (ProcessThread thread in process.Threads)
                             {
-                                foreach (ProcessThread thread in process.Threads)
+                                if (GetMainWindowForProcess_Value != IntPtr.Zero)
                                 {
-                                    if (GetMainWindowForProcess_Value != IntPtr.Zero)
-                                    {
-                                        break;
-                                    }
-
-                                    EnumThreadWindows(thread.Id, GetMainWindowForProcess_EnumWindows, i);
+                                    break;
                                 }
-                            }
-                        });
-                        hMainWindow = GetMainWindowForProcess_Value;
-                    }
 
+                                EnumThreadWindows(thread.Id, GetMainWindowForProcess_EnumWindows, i);
+                            }
+                        }
+                    });
+                    hMainWindow = GetMainWindowForProcess_Value;
                     if (hMainWindow != IntPtr.Zero)
                     {
                         return hMainWindow;

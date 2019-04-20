@@ -208,6 +208,10 @@ namespace BorderlessGaming.Forms
 
         private void HandleProcessChange(ProcessDetails process, bool remove)
         {
+            if (process == null)
+            {
+                return;
+            }
             if (remove)
             {
                 this.PerformSafely(() => lstProcesses.Items.Remove(process));
@@ -224,6 +228,10 @@ namespace BorderlessGaming.Forms
             //clear the process list and repopulate it
             lstProcesses.Items.Clear();
             await _watcher.Refresh();
+        }
+        private void rainwayToolStrip_Click(object sender, EventArgs e)
+        {
+            Tools.GotoSite("https://rainway.io/?ref=borderlessgaming");
         }
 
         private void usageGuideToolStripMenuItem_Click(object sender, EventArgs e)
@@ -294,7 +302,7 @@ namespace BorderlessGaming.Forms
         /// <summary>
         ///     Makes the currently selected process borderless
         /// </summary>
-        private void btnMakeBorderless_Click(object sender, EventArgs e)
+        private async void btnMakeBorderless_Click(object sender, EventArgs e)
         {
             if (lstProcesses.SelectedItem == null)
             {
@@ -308,7 +316,7 @@ namespace BorderlessGaming.Forms
                 return;
             }
 
-            _watcher.RemoveBorder(pd);
+            await _watcher.RemoveBorder(pd);
         }
 
         private void btnRestoreWindow_Click(object sender, EventArgs e)
@@ -868,7 +876,7 @@ fav.PositionX.ToString()), out int favPositionX);
                     var label = fixedDeviceName + (screen.Primary ? " (P)" : string.Empty);
 
                     var tsi = new ToolStripMenuItem(label);
-                    tsi.Click += (s, ea) => { _watcher.RemoveBorder_ToSpecificScreen(pd, screen); };
+                    tsi.Click += async (s, ea) => { await _watcher.RemoveBorder_ToSpecificScreen(pd, screen); };
 
                     contextBorderlessOn.DropDownItems.Add(tsi);
                 }
@@ -876,7 +884,7 @@ fav.PositionX.ToString()), out int favPositionX);
                 // add supersize Option
                 var superSizeItem = new ToolStripMenuItem(LanguageManager.Data("superSize"));
 
-                superSizeItem.Click += (s, ea) => { _watcher.RemoveBorder_ToSpecificRect(pd, superSize); };
+                superSizeItem.Click += async (s, ea) => { await _watcher.RemoveBorder_ToSpecificRect(pd, superSize); };
 
                 contextBorderlessOn.DropDownItems.Add(superSizeItem);
             }
@@ -946,8 +954,15 @@ fav.PositionX.ToString()), out int favPositionX);
             if (Config.Instance.AppSettings.StartMinimized || Config.Instance.StartupOptions.Minimize)
             {
                 Hide();
-            }
+            } else {
+             //   if (Config.Instance.AppSettings.ShowAdOnStart)
+               // {
+                //    var rainway = new Rainway { StartPosition = this.StartPosition, TopMost = true };
+                 //   rainway.ShowDialog(this);
+                 //   rainway.BringToFront();
 
+               // }
+            }
             // initialize favorite list
             foreach (var ni in Config.Instance.Favorites)
             {
@@ -1147,7 +1162,7 @@ fav.PositionX.ToString()), out int favPositionX);
                         // Otherwise, this is a fresh request to remove the border from the current window
                         else
                         {
-                            _watcher.RemoveBorder(pd);
+                             _watcher.RemoveBorder(pd).GetAwaiter().GetResult();
                         }
                     }
 
@@ -1209,6 +1224,11 @@ fav.PositionX.ToString()), out int favPositionX);
                 }
             }
             RefreshFavoritesList(fav);
+        }
+
+        private void checkOutRainwayToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            Tools.GotoSite("https://rainway.io/?ref=borderlessgaming3");
         }
     }
 }

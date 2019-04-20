@@ -14,6 +14,9 @@ namespace BorderlessGaming.Logic.Core
 {
     public class LanguageManager
     {
+
+        public static string CurrentCulture { get; set; }
+
         private static readonly HashSet<string> CultureNames = CreateCultureNames();
 
         private static readonly string _archiveName = "Languages.zip";
@@ -39,8 +42,7 @@ namespace BorderlessGaming.Logic.Core
         public static string Data(string key)
         {
             key = key.ToLower();
-            var culture = Thread.CurrentThread.CurrentCulture.Name;
-            var lang = Languages[culture];
+            var lang = Languages[CurrentCulture];
             var data = lang.Data(key);
             if (string.IsNullOrWhiteSpace(data))
             {
@@ -55,8 +57,26 @@ namespace BorderlessGaming.Logic.Core
             Languages = new Dictionary<string, Language>();
             if (File.Exists(_archiveName))
             {
-                Tools.ExtractZipFile(_archiveName, string.Empty, AppEnvironment.LanguagePath);
-                File.Delete(_archiveName);
+                try
+                {
+                    if (Directory.Exists(AppEnvironment.LanguagePath))
+                    {
+                        Directory.Delete(AppEnvironment.LanguagePath, true);
+                        Directory.CreateDirectory(AppEnvironment.LanguagePath);
+                    }
+                    Tools.ExtractZipFile(_archiveName, string.Empty, AppEnvironment.LanguagePath);
+                    File.Delete(_archiveName);
+                }
+                catch (Exception e)
+                {
+                    MessageBox.Show("Failed to extract the language pack. Please report this: " + e.Message);
+                    Environment.Exit(1);
+                }
+            }
+            if (!Directory.Exists(AppEnvironment.LanguagePath))
+            {
+                MessageBox.Show("UI Translations are missing from disk.");
+                Environment.Exit(1);
             }
             foreach (var langFile in Directory.GetFiles(AppEnvironment.LanguagePath, "*.lang"))
             {
@@ -126,9 +146,17 @@ namespace BorderlessGaming.Logic.Core
 
         private static bool IsDefault(string displayName)
         {
-            var defaultCulture = Config.Instance.AppSettings.DefaultCulture;
-            var langauge = Languages.Values.FirstOrDefault(lang => lang.DisplayName.Equals(displayName));
-            return langauge != null && langauge.Culture.Equals(defaultCulture);
+            try
+            {
+                var defaultCulture = Config.Instance.AppSettings.DefaultCulture;
+                var langauge = Languages.Values.FirstOrDefault(lang => lang.DisplayName.Equals(displayName));
+                return langauge != null && langauge.Culture.Equals(defaultCulture);
+            }
+            catch
+            {
+
+                return false;
+            }
         }
 
         private static void SetDefaultLanguage(string tsiText)
